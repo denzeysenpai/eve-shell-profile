@@ -132,20 +132,6 @@ function eve_net_test {
     $speed
 }
 
-
-function eve_net_scan {
-
-    Write-EveHeader "Network Device Scan"
-
-    arp -a | ForEach-Object {
-
-        if ($_ -match "dynamic") {
-
-            Write-Host $_ -ForegroundColor Green
-        }
-    }
-}
-
 function eve_procs {
 
     Write-EveHeader "Running Processes"
@@ -421,6 +407,68 @@ function eve_doctor {
     Write-Host "Diagnostics complete. You are welcome." -ForegroundColor Cyan
 }
 
+function eve_net_scan {
+    Write-EveHeader "Network UAV Inbound"
+    Write-Host "Scanning local network..." -ForegroundColor Yellow
+
+    # Get local IPv4 address
+    $localIP = (Get-NetIPAddress -AddressFamily IPv4 |
+        Where-Object {$_.IPAddress -notlike "169.*" -and $_.IPAddress -ne "127.0.0.1"} |
+        Select-Object -First 1).IPAddress
+
+    if (!$localIP) {
+        Write-Host "Unable to determine local network. Better luck next time, soldier." -ForegroundColor Red
+        return
+    }
+
+    $subnet = $localIP.Substring(0, $localIP.LastIndexOf("."))
+
+    Write-Host "Local subnet: $subnet.0/24" -ForegroundColor Cyan
+    Write-Host ""
+
+    # Ping sweep
+    1..254 | ForEach-Object {
+
+        $ip = "$subnet.$_"
+
+        Test-Connection $ip -Count 1 -Quiet -ErrorAction SilentlyContinue | Out-Null
+    }
+
+    Start-Sleep 1
+
+    # Read ARP table
+    $devices = arp -a
+
+    Write-Host "Discovered Devices" -ForegroundColor Cyan
+    Write-Host ""
+
+    foreach ($line in $devices) {
+
+        if ($line -match "(\d+\.\d+\.\d+\.\d+)\s+([a-f0-9\-]+)") {
+
+            $ip = $matches[1]
+            $mac = $matches[2]
+
+            try {
+                $hostname = [System.Net.Dns]::GetHostEntry($ip).HostName
+            }
+            catch {
+                $hostname = "Unknown"
+            }
+
+            Write-Host "IP      :" -NoNewline
+            Write-Host " $ip" -ForegroundColor Green
+
+            Write-Host "MAC     :" $mac
+            Write-Host "Host    :" $hostname
+            Write-Host "-----------------------------"
+        }
+    }
+
+    Write-Host ""
+    Write-Host "Radar scan complete." -ForegroundColor Cyan
+}
+
 function eve {
 
     param($a,$b,$c)
@@ -451,7 +499,7 @@ function eve {
             else { Write-EveError }
         }
 
-        
+
         "help" { eve_help }
         default { Write-EveError }
     }
