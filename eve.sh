@@ -240,6 +240,44 @@ function eve_info_system {
     Write-Host "Uptime   :" ((Get-Date) - $os.LastBootUpTime)
 }
 
+function eve_genocide {
+
+    Write-Host ""
+    Write-Host "WARNING:" -ForegroundColor Red
+    Write-Host "This will forcefully terminate all running applications." -ForegroundColor Yellow
+    Write-Host "System services will NOT be affected."
+    Write-Host ""
+
+    $confirm = Read-Host "Are you sure? Y/n"
+
+    if ($confirm -ne "Y") {
+        Write-Host "Operation cancelled." -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host ""
+    Write-Host "Terminating user applications..." -ForegroundColor Red
+
+    $systemProcesses = @(
+        "System","Idle","wininit","csrss","services","lsass",
+        "svchost","explorer"
+    )
+
+    Get-Process | Where-Object {
+        $systemProcesses -notcontains $_.Name
+    } | ForEach-Object {
+
+        try {
+            Stop-Process $_.Id -Force -ErrorAction SilentlyContinue
+            Write-Host "Killed $($_.Name)" -ForegroundColor DarkRed
+        }
+        catch {}
+    }
+
+    Write-Host ""
+    Write-Host "User applications terminated." -ForegroundColor Green
+}
+
 function eve {
 
     param($a,$b,$c)
@@ -249,6 +287,7 @@ function eve {
         "notemp" { eve_notemp }
         "procs" { eve_procs }
         "find" { eve_find $b $c }
+        "genocide" { eve_genocide }
         "net" {
             switch ($b) {
                 "test" { eve_net_test }
