@@ -278,6 +278,22 @@ function eve_genocide {
     Write-Host "User applications terminated." -ForegroundColor Green
 }
 
+function eve_disk {
+
+    Write-EveHeader "Disk Usage"
+
+    Get-PSDrive -PSProvider FileSystem | ForEach-Object {
+
+        $used = $_.Used / 1GB
+        $free = $_.Free / 1GB
+        $total = $used + $free
+
+        $percent = [math]::Round(($used/$total)*100,2)
+
+        Write-Host "$($_.Name): $percent% used  ($([math]::Round($used,2))GB / $([math]::Round($total,2))GB)" -ForegroundColor Cyan
+    }
+}
+
 function eve {
 
     param($a,$b,$c)
@@ -288,6 +304,8 @@ function eve {
         "procs" { eve_procs }
         "find" { eve_find $b $c }
         "genocide" { eve_genocide }
+        "disk" { eve_disk }
+
         "net" {
             switch ($b) {
                 "test" { eve_net_test }
