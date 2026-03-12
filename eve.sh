@@ -521,6 +521,18 @@ function eve_net_scan {
     $results | Format-Table -AutoSize
 }
 
+function eve_portkill($port) {
+
+    $conn = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue
+
+    if (!$conn) {
+        Write-Host "No process using port $port" -ForegroundColor Yellow
+        return
+    }
+    Stop-Process -Id $conn.OwningProcess -Force
+    Write-Host "Port $port is properly disposed in the lake, boss." -ForegroundColor Green
+}
+
 function eve {
 
     param($a,$b,$c)
@@ -539,6 +551,7 @@ function eve {
             switch ($b) {
                 "test" { eve_net_test }
                 "scan" { eve_net_scan }
+                "portkill" { eve_portkill }
                 default { Write-EveError }
             }
         }
