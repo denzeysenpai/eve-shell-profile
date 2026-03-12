@@ -409,64 +409,87 @@ function eve_doctor {
 
 function eve_net_scan {
     Write-EveHeader "Network UAV Inbound"
-    Write-Host "Scanning local network..." -ForegroundColor Yellow
 
-    # Get local IPv4 address
+    Write-Host "Scanning local network..." -ForegroundColor Yellow
+    # Get local IP
     $localIP = (Get-NetIPAddress -AddressFamily IPv4 |
         Where-Object {$_.IPAddress -notlike "169.*" -and $_.IPAddress -ne "127.0.0.1"} |
         Select-Object -First 1).IPAddress
 
     if (!$localIP) {
-        Write-Host "Unable to determine local network. Better luck next time, soldier." -ForegroundColor Red
+        Write-Host "Unable to detect local network." -ForegroundColor Red
         return
     }
 
-    $subnet = $localIP.Substring(0, $localIP.LastIndexOf("."))
+    $subnet = $localIP.Substring(0,$localIP.LastIndexOf("."))
 
-    Write-Host "Local subnet: $subnet.0/24" -ForegroundColor Cyan
+    Write-Host "Scanning subnet $subnet.0/24" -ForegroundColor Cyan
     Write-Host ""
 
-    # Ping sweep
-    1..254 | ForEach-Object {
+    $results = @()
 
-        $ip = "$subnet.$_"
+    for ($i=1;$i -le 254;$i++) {
 
-        Test-Connection $ip -Count 1 -Quiet -ErrorAction SilentlyContinue | Out-Null
-    }
+        $ip = "$subnet.$i"
 
-    Start-Sleep 1
+        Write-Progress -Activity "Network Scan" -Status $ip -PercentComplete (($i/254)*100)
 
-    # Read ARP table
-    $devices = arp -a
+        $ping = Test-Connection $ip -Count 1 -ErrorAction SilentlyContinue
 
-    Write-Host "Discovered Devices" -ForegroundColor Cyan
-    Write-Host ""
-
-    foreach ($line in $devices) {
-
-        if ($line -match "(\d+\.\d+\.\d+\.\d+)\s+([a-f0-9\-]+)") {
-
-            $ip = $matches[1]
-            $mac = $matches[2]
+        if ($ping) {
+            $latency = $ping.ResponseTime
 
             try {
-                $hostname = [System.Net.Dns]::GetHostEntry($ip).HostName
+                $host = [System.Net.Dns]::GetHostEntry($ip).HostName
             }
             catch {
-                $hostname = "Unknown"
+                $host = "Unknown"
             }
 
-            Write-Host "IP      :" -NoNewline
-            Write-Host " $ip" -ForegroundColor Green
+            $arp = arp -a | Select-String $ip
 
-            Write-Host "MAC     :" $mac
-            Write-Host "Host    :" $hostname
-            Write-Host "-----------------------------"
+            if ($arp -match "([a-f0-9\-]{17})") {
+                $mac = $matches[1]
+            }
+            else {
+                $mac = "Unknown"
+            }
+
+            $commonPorts = 22,80,443,445,3389
+            $openPorts = @()
+
+            foreach ($p in $commonPorts) {
+                try {
+                    $tcp = New-Object Net.Sockets.TcpClient
+                    $tcp.ConnectAsync($ip,$p).Wait(150)
+
+                    if ($tcp.Connected) {
+                        $openPorts += $p
+                        $tcp.Close()
+                    }
+                }
+                catch {}
+            }
+
+            $results += [PSCustomObject]@{
+                IP = $ip
+                Host = $host
+                MAC = $mac
+                Latency = "$latency ms"
+                Ports = ($openPorts -join ",")
+            }
         }
     }
 
-    Write-Host ""
-    Write-Host "Radar scan complete." -ForegroundColor Cyan
+    Clear-Host
+    Write-EveHeader "UAV complete."
+
+    if ($results.Count -eq 0) {
+        Write-Host "No devices discovered. We'll get them next time." -ForegroundColor Yellow
+        return
+    }
+
+    $results | Format-Table -AutoSize
 }
 
 function eve {
