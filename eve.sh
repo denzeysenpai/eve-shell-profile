@@ -40,12 +40,11 @@ function Write-EveError {
     Write-Host "Suggestion: eve help" -ForegroundColor DarkGray
 }
 
-
 function eve_help {
     Write-EveHeader "So you finally asked?"
 
     function Write-EveRow($cmd,$desc) {
-        $pad = 30
+        $pad = 35
         $left = $cmd.PadRight($pad)
         Write-Host $left -ForegroundColor Green -NoNewline
         Write-Host " | " -ForegroundColor DarkGray -NoNewline
@@ -76,6 +75,7 @@ function eve_help {
 
     Write-EveRow "eve net test" "Run network latency diagnostics."
     Write-EveRow "eve net scan" "Scan local network and discover devices."
+    Write-EveRow "eve net portkill <port>" "Terminate process using a specific TCP port."
 
     Write-Host ""
     Write-Host "INFORMATION" -ForegroundColor Cyan
@@ -87,15 +87,20 @@ function eve_help {
     Write-EveRow "eve info for=<path>" "Show detailed information about a file or directory."
 
     Write-Host ""
+    Write-Host "REMINDERS" -ForegroundColor Cyan
+    Write-Host ""
+
+    Write-EveRow "eve remindme <message> <minutes>" "Set a reminder to display a message after specified minutes."
+
+    Write-Host ""
     Write-Host "HELP" -ForegroundColor Cyan
     Write-Host ""
 
     Write-EveRow "eve help" "Displays this command reference."
 
     Write-Host ""
-    Write-Host "Tip: Commands are case-insensitive." -ForegroundColor DarkGray
+    Write-Host "Tip: Commands are case-insensitive, so pay attention." -ForegroundColor DarkGray
 }
-
 
 function eve_tidy {
 
