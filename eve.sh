@@ -533,6 +533,30 @@ function eve_portkill($port) {
     Write-Host "Port $port is properly disposed in the lake, boss." -ForegroundColor Green
 }
 
+function eve_remindme {
+    param(
+        [Parameter(Mandatory=$true)] [string]$message,
+        [Parameter(Mandatory=$true)] [int]$minutes
+    )
+
+    if ($minutes -le 0) {
+        Write-Host "Duration must be at least 1 minute dawg." -ForegroundColor Yellow
+        return
+    }
+
+    Write-Host "Aight, I'll remind you $minutes minute(s) from now..." -ForegroundColor Green
+
+    Start-Sleep -Seconds ($minutes * 60)
+
+    try {
+        $currentUser = whoami
+        msg * $message
+    }
+    catch {
+        Write-Host "Dawg, just reminding you: $message" -ForegroundColor Cyan
+    }
+}
+
 function eve {
 
     param($a,$b,$c)
@@ -551,19 +575,20 @@ function eve {
             switch ($b) {
                 "test" { eve_net_test }
                 "scan" { eve_net_scan }
-                "portkill" { eve_portkill }
+                "portkill" { eve_portkill $b }
                 default { Write-EveError }
             }
         }
 
         "info" {
             if ($b -eq "ips") { eve_info_ips }
-            elseif ($b -eq "ports") { eve_info_ports }
+            elseif ($b -eq "ports") { eve_info_ports  }
             elseif ($b -eq "system") { eve_info_system }
             elseif ($b -like "for=*") { eve_info_for $b }
             else { Write-EveError }
         }
 
+        "remindme" { eve_remindme $b $c }
 
         "help" { eve_help }
         default { Write-EveError }
