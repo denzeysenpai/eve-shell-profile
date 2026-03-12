@@ -192,12 +192,30 @@ function eve_find($type,$name) {
 }
 
 function eve_info_ips {
-
     Write-EveHeader "IP Addresses"
-
+    Write-Host ""
+    Write-Host "Local Network Interfaces" -ForegroundColor Cyan
     Get-NetIPAddress |
-        Where-Object {$_.AddressFamily -eq "IPv4"} |
-        Select InterfaceAlias,IPAddress
+        Where-Object {$_.AddressFamily -eq "IPv4" -and $_.IPAddress -ne "127.0.0.1"} |
+        Select-Object InterfaceAlias,IPAddress |
+        Format-Table
+        
+    Write-Host ""
+    Write-Host "Public Network Info" -ForegroundColor Cyan
+
+    try {
+        $ip = Invoke-RestMethod "https://ipinfo.io/json"
+
+        Write-Host "Public IP :" $ip.ip -ForegroundColor Green
+        Write-Host "City      :" $ip.city
+        Write-Host "Region    :" $ip.region
+        Write-Host "Country   :" $ip.country
+        Write-Host "ISP       :" $ip.org
+    }
+    catch {
+
+        Write-Host "Unable to retrieve public IP information." -ForegroundColor Yellow
+    }
 }
 
 function eve_info_ports {
