@@ -199,7 +199,7 @@ function eve_info_ips {
         Where-Object {$_.AddressFamily -eq "IPv4" -and $_.IPAddress -ne "127.0.0.1"} |
         Select-Object InterfaceAlias,IPAddress |
         Format-Table
-        
+
     Write-Host ""
     Write-Host "Public Network Info" -ForegroundColor Cyan
 
@@ -312,6 +312,115 @@ function eve_disk {
     }
 }
 
+function eve_doctor {
+    Write-EveHeader "System Diagnostics"
+
+    $cpuLoad = (Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average
+
+    if ($cpuLoad -lt 40) { $cpuColor = "Green"; $cpuStatus = "Healthy" }
+    elseif ($cpuLoad -lt 75) { $cpuColor = "Yellow"; $cpuStatus = "Busy" }
+    else { $cpuColor = "Red"; $cpuStatus = "Overloaded" }
+
+    Write-Host "CPU Load :" -NoNewline
+    Write-Host " $cpuLoad% ($cpuStatus)" -ForegroundColor $cpuColor
+
+    $os = Get-CimInstance Win32_OperatingSystem
+    $totalRam = [math]::Round($os.TotalVisibleMemorySize / 1MB,2)
+    $freeRam = [math]::Round($os.FreePhysicalMemory / 1MB,2)
+    $usedRam = [math]::Round($totalRam - $freeRam,2)
+    $ramPercent = [math]::Round(($usedRam/$totalRam)*100,2)
+
+    if ($ramPercent -lt 50) { $ramColor = "Green"; $ramStatus = "Healthy" }
+    elseif ($ramPercent -lt 80) { $ramColor = "Yellow"; $ramStatus = "Heavy Usage" }
+    else { $ramColor = "Red"; $ramStatus = "Critical" }
+
+    Write-Host "RAM Usage:" -NoNewline
+    Write-Host " $usedRam GB / $totalRam GB ($ramPercent%) - $ramStatus" -ForegroundColor $ramColor
+
+    Write-Host ""
+    Write-Host "Disk Health" -ForegroundColor Cyan
+
+    Get-PSDrive -PSProvider FileSystem | ForEach-Object {
+
+        $used = $_.Used / 1GB
+        $free = $_.Free / 1GB
+        $total = $used + $free
+        $percent = [math]::Round(($used/$total)*100,2)
+
+        if ($percent -lt 70) { $color="Green" }
+        elseif ($percent -lt 90) { $color="Yellow" }
+        else { $color="Red" }
+
+        Write-Host "$($_.Name): $percent% used" -ForegroundColor $color
+    }
+
+    Write-Host ""
+    Write-Host "Network Test" -ForegroundColor Cyan
+
+    $ping = Test-Connection 8.8.8.8 -Count 3 -ErrorAction SilentlyContinue
+
+    if ($ping) {
+
+        $latency = ($ping | Measure-Object ResponseTime -Average).Average
+
+        if ($latency -lt 30) { $netColor="Green"; $netStatus="Excellent" }
+        elseif ($latency -lt 80) { $netColor="Yellow"; $netStatus="Good" }
+        else { $netColor="Red"; $netStatus="Poor" }
+
+        Write-Host "Latency:" -NoNewline
+        Write-Host " $latency ms ($netStatus)" -ForegroundColor $netColor
+    }
+    else {
+        Write-Host "Network unreachable." -ForegroundColor Red
+    }
+
+    Write-Host ""
+    Write-Host "System Info" -ForegroundColor Cyan
+
+    $boot = $os.LastBootUpTime
+    $uptime = (Get-Date) - $boot
+
+    Write-Host "Computer :" $env:COMPUTERNAME
+    Write-Host "User     :" $env:USERNAME
+    Write-Host "Uptime   :" "$($uptime.Days)d $($uptime.Hours)h $($uptime.Minutes)m"
+
+
+    Write-Host ""
+    Write-Host "Top CPU Big Bois" -ForegroundColor Cyan
+
+    Get-Process |
+        Sort-Object CPU -Descending |
+        Select-Object -First 5 Name,
+            @{Name="CPU_Time";Expression={[math]::Round($_.CPU,2)}},
+            Id |
+        Format-Table
+
+    try {
+
+        $temp = Get-WmiObject MSAcpi_ThermalZoneTemperature -Namespace "root/wmi" |
+            Select-Object -First 1
+
+        if ($temp) {
+
+            $celsius = ($temp.CurrentTemperature / 10) - 273.15
+            $celsius = [math]::Round($celsius,1)
+
+            Write-Host ""
+            Write-Host "CPU Temperature :" -NoNewline
+
+            if ($celsius -lt 65) { $tColor="Green" }
+            elseif ($celsius -lt 80) { $tColor="Yellow" }
+            else { $tColor="Red" }
+
+            Write-Host " $celsius °C" -ForegroundColor $tColor
+        }
+
+    } catch {}
+
+    Write-Host ""
+    Write-Host "Diagnostics complete. You are welcome." -ForegroundColor Cyan
+}
+
 function eve {
 
     param($a,$b,$c)
@@ -323,6 +432,8 @@ function eve {
         "find" { eve_find $b $c }
         "genocide" { eve_genocide }
         "disk" { eve_disk }
+        "doctor" { eve_doctor }
+
 
         "net" {
             switch ($b) {
@@ -339,6 +450,8 @@ function eve {
             elseif ($b -like "for=*") { eve_info_for $b }
             else { Write-EveError }
         }
+
+        
         "help" { eve_help }
         default { Write-EveError }
     }
