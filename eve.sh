@@ -40,31 +40,60 @@ function Write-EveError {
     Write-Host "Suggestion: eve help" -ForegroundColor DarkGray
 }
 
+
 function eve_help {
-    Write-EveHeader "Commands"
+    Write-EveHeader "So you finally asked?"
 
-    Write-Host "eve tidy" -ForegroundColor Green
-    Write-Host "  Organize Downloads folder by file type"
+    function Write-EveRow($cmd,$desc) {
+        $pad = 30
+        $left = $cmd.PadRight($pad)
+        Write-Host $left -ForegroundColor Green -NoNewline
+        Write-Host " | " -ForegroundColor DarkGray -NoNewline
+        Write-Host $desc
+    }
 
-    Write-Host "eve notemp" -ForegroundColor Green
-    Write-Host "  Clears temporary files"
+    Write-Host ""
+    Write-Host "FILE UTILITIES" -ForegroundColor Cyan
+    Write-Host ""
 
-    Write-Host "eve net test" -ForegroundColor Green
-    Write-Host "  Network latency diagnostics"
+    Write-EveRow "eve tidy" "Organize Downloads folder by file type. Apartheid for downloaded files."
+    Write-EveRow "eve notemp" "Clears temporary files. No temp files no more."
+    Write-EveRow "eve find file <name>" "Search for a file recursively."
+    Write-EveRow "eve find dir <name>" "Search for a directory recursively."
 
-    Write-Host "eve net scan" -ForegroundColor Green
-    Write-Host "  Scan local network devices"
+    Write-Host ""
+    Write-Host "SYSTEM" -ForegroundColor Cyan
+    Write-Host ""
 
-    Write-Host "eve procs" -ForegroundColor Green
-    Write-Host "  List running processes"
+    Write-EveRow "eve procs" "List running processes."
+    Write-EveRow "eve disk" "Show disk usage statistics."
+    Write-EveRow "eve doctor" "Run full system diagnostics."
+    Write-EveRow "eve genocide" "Force terminate user applications."
 
-    Write-Host "eve find file <name>" -ForegroundColor Green
-    Write-Host "eve find dir <name>" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "NETWORK" -ForegroundColor Cyan
+    Write-Host ""
 
-    Write-Host "eve info ips" -ForegroundColor Green
-    Write-Host "eve info ports" -ForegroundColor Green
-    Write-Host "eve info for=<path>" -ForegroundColor Green
-    Write-Host "eve info system" -ForegroundColor Green
+    Write-EveRow "eve net test" "Run network latency diagnostics."
+    Write-EveRow "eve net scan" "Scan local network and discover devices."
+
+    Write-Host ""
+    Write-Host "INFORMATION" -ForegroundColor Cyan
+    Write-Host ""
+
+    Write-EveRow "eve info ips" "Show local and public IP information."
+    Write-EveRow "eve info ports" "List active TCP ports."
+    Write-EveRow "eve info system" "Display system hardware information."
+    Write-EveRow "eve info for=<path>" "Show detailed information about a file or directory."
+
+    Write-Host ""
+    Write-Host "HELP" -ForegroundColor Cyan
+    Write-Host ""
+
+    Write-EveRow "eve help" "Displays this command reference."
+
+    Write-Host ""
+    Write-Host "Tip: Commands are case-insensitive." -ForegroundColor DarkGray
 }
 
 
